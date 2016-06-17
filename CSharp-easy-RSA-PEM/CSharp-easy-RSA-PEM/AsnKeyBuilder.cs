@@ -253,58 +253,58 @@ namespace CSInteropKeys
     private static byte[] ZERO = new byte[] { 0 };
     private static byte[] EMPTY = new byte[] { };
 
-    // PublicKeyInfo (X.509 compatible) message
-    /// <summary>
-    /// Returns the AsnMessage representing the X.509 PublicKeyInfo.
-    /// </summary>
-    /// <param name="publicKey">The DSA key to be encoded.</param>
-    /// <returns>Returns the AsnType representing the
-    /// X.509 PublicKeyInfo.</returns>
-    /// <seealso cref="PrivateKeyToPKCS8(DSAParameters)"/>
-    /// <seealso cref="PrivateKeyToPKCS8(RSAParameters)"/>
-    /// <seealso cref="PublicKeyToX509(RSAParameters)"/>
-    internal static AsnMessage PublicKeyToX509(DSAParameters publicKey)
-    {
-      // Value Type cannot be null
-      // Debug.Assert(null != publicKey);
+    //// PublicKeyInfo (X.509 compatible) message
+    ///// <summary>
+    ///// Returns the AsnMessage representing the X.509 PublicKeyInfo.
+    ///// </summary>
+    ///// <param name="publicKey">The DSA key to be encoded.</param>
+    ///// <returns>Returns the AsnType representing the
+    ///// X.509 PublicKeyInfo.</returns>
+    ///// <seealso cref="PrivateKeyToPKCS8(DSAParameters)"/>
+    ///// <seealso cref="PrivateKeyToPKCS8(RSAParameters)"/>
+    ///// <seealso cref="PublicKeyToX509(RSAParameters)"/>
+    //internal static AsnMessage PublicKeyToX509(DSAParameters publicKey)
+    //{
+    //  // Value Type cannot be null
+    //  // Debug.Assert(null != publicKey);
 
-      /* *
-      * SEQUENCE              // PrivateKeyInfo
-      * +- SEQUENCE           // AlgorithmIdentifier
-      * |  +- OID             // 1.2.840.10040.4.1
-      * |  +- SEQUENCE        // DSS-Params (Optional Parameters)
-      * |    +- INTEGER (P)
-      * |    +- INTEGER (Q)
-      * |    +- INTEGER (G)
-      * +- BITSTRING          // PublicKey
-      *    +- INTEGER(Y)      // DSAPublicKey Y
-      * */
+    //  /* *
+    //  * SEQUENCE              // PrivateKeyInfo
+    //  * +- SEQUENCE           // AlgorithmIdentifier
+    //  * |  +- OID             // 1.2.840.10040.4.1
+    //  * |  +- SEQUENCE        // DSS-Params (Optional Parameters)
+    //  * |    +- INTEGER (P)
+    //  * |    +- INTEGER (Q)
+    //  * |    +- INTEGER (G)
+    //  * +- BITSTRING          // PublicKey
+    //  *    +- INTEGER(Y)      // DSAPublicKey Y
+    //  * */
 
-      // DSA Parameters
-      AsnType p = CreateIntegerPos(publicKey.P);
-      AsnType q = CreateIntegerPos(publicKey.Q);
-      AsnType g = CreateIntegerPos(publicKey.G);
+    //  // DSA Parameters
+    //  AsnType p = CreateIntegerPos(publicKey.P);
+    //  AsnType q = CreateIntegerPos(publicKey.Q);
+    //  AsnType g = CreateIntegerPos(publicKey.G);
 
-      // Sequence - DSA-Params
-      AsnType dssParams = CreateSequence(new AsnType[] { p, q, g });
+    //  // Sequence - DSA-Params
+    //  AsnType dssParams = CreateSequence(new AsnType[] { p, q, g });
 
-      // OID - packed 1.2.840.10040.4.1
-      //   { 0x2A, 0x86, 0x48, 0xCE, 0x38, 0x04, 0x01 }
-      AsnType oid = CreateOid("1.2.840.10040.4.1");
+    //  // OID - packed 1.2.840.10040.4.1
+    //  //   { 0x2A, 0x86, 0x48, 0xCE, 0x38, 0x04, 0x01 }
+    //  AsnType oid = CreateOid("1.2.840.10040.4.1");
 
-      // Sequence
-      AsnType algorithmID = CreateSequence(new AsnType[] { oid, dssParams });
+    //  // Sequence
+    //  AsnType algorithmID = CreateSequence(new AsnType[] { oid, dssParams });
 
-      // Public Key Y
-      AsnType y = CreateIntegerPos(publicKey.Y);
-      AsnType key = CreateBitString(y);
+    //  // Public Key Y
+    //  AsnType y = CreateIntegerPos(publicKey.Y);
+    //  AsnType key = CreateBitString(y);
 
-      // Sequence 'A'
-      AsnType publicKeyInfo =
-        CreateSequence(new AsnType[] { algorithmID, key });
+    //  // Sequence 'A'
+    //  AsnType publicKeyInfo =
+    //    CreateSequence(new AsnType[] { algorithmID, key });
 
-      return new AsnMessage(publicKeyInfo.GetBytes(), "X.509");
-    }
+    //  return new AsnMessage(publicKeyInfo.GetBytes(), "X.509");
+    //}
 
     // PublicKeyInfo (X.509 compatible) message
     /// <summary>
@@ -350,63 +350,63 @@ namespace CSInteropKeys
       return new AsnMessage(publicKeyInfo.GetBytes(), "X.509");
     }
 
-    // PKCS #8, Section 6 (PrivateKeyInfo) message
-    // !!!!!!!!!!!!!!! Unencrypted !!!!!!!!!!!!!!!
-    /// <summary>
-    /// Returns AsnMessage representing the unencrypted
-    /// PKCS #8 PrivateKeyInfo.
-    /// </summary>
-    /// <param name="privateKey">The DSA key to be encoded.</param>
-    /// <returns>Returns the AsnType representing the unencrypted
-    /// PKCS #8 PrivateKeyInfo.</returns>
-    /// <seealso cref="PrivateKeyToPKCS8(RSAParameters)"/>
-    /// <seealso cref="PublicKeyToX509(DSAParameters)"/>
-    /// <seealso cref="PublicKeyToX509(RSAParameters)"/>
-    internal static AsnMessage PrivateKeyToPKCS8(DSAParameters privateKey)
-    {
-      // Value Type cannot be null
-      // Debug.Assert(null != privateKey);
+    //// PKCS #8, Section 6 (PrivateKeyInfo) message
+    //// !!!!!!!!!!!!!!! Unencrypted !!!!!!!!!!!!!!!
+    ///// <summary>
+    ///// Returns AsnMessage representing the unencrypted
+    ///// PKCS #8 PrivateKeyInfo.
+    ///// </summary>
+    ///// <param name="privateKey">The DSA key to be encoded.</param>
+    ///// <returns>Returns the AsnType representing the unencrypted
+    ///// PKCS #8 PrivateKeyInfo.</returns>
+    ///// <seealso cref="PrivateKeyToPKCS8(RSAParameters)"/>
+    ///// <seealso cref="PublicKeyToX509(DSAParameters)"/>
+    ///// <seealso cref="PublicKeyToX509(RSAParameters)"/>
+    //internal static AsnMessage PrivateKeyToPKCS8(DSAParameters privateKey)
+    //{
+    //  // Value Type cannot be null
+    //  // Debug.Assert(null != privateKey);
 
-      /* *
-      * SEQUENCE              // PrivateKeyInfo
-      * +- INTEGER(0)         // Version (v1998)
-      * +- SEQUENCE           // AlgorithmIdentifier
-      * |  +- OID             // 1.2.840.10040.4.1
-      * |  +- SEQUENCE        // DSS-Params (Optional Parameters)
-      * |    +- INTEGER (P)
-      * |    +- INTEGER (Q)
-      * |    +- INTEGER (G)
-      * +- OCTETSTRING        // PrivateKey
-      *    +- INTEGER(X)   // DSAPrivateKey X
-      * */
+    //  /* *
+    //  * SEQUENCE              // PrivateKeyInfo
+    //  * +- INTEGER(0)         // Version (v1998)
+    //  * +- SEQUENCE           // AlgorithmIdentifier
+    //  * |  +- OID             // 1.2.840.10040.4.1
+    //  * |  +- SEQUENCE        // DSS-Params (Optional Parameters)
+    //  * |    +- INTEGER (P)
+    //  * |    +- INTEGER (Q)
+    //  * |    +- INTEGER (G)
+    //  * +- OCTETSTRING        // PrivateKey
+    //  *    +- INTEGER(X)   // DSAPrivateKey X
+    //  * */
 
-      // Version - 0 (v1998)
-      AsnType version = CreateInteger(ZERO);
+    //  // Version - 0 (v1998)
+    //  AsnType version = CreateInteger(ZERO);
 
-      // Domain Parameters
-      AsnType p = CreateIntegerPos(privateKey.P);
-      AsnType q = CreateIntegerPos(privateKey.Q);
-      AsnType g = CreateIntegerPos(privateKey.G);
+    //  // Domain Parameters
+    //  AsnType p = CreateIntegerPos(privateKey.P);
+    //  AsnType q = CreateIntegerPos(privateKey.Q);
+    //  AsnType g = CreateIntegerPos(privateKey.G);
 
-      AsnType dssParams = CreateSequence(new AsnType[] { p, q, g });
+    //  AsnType dssParams = CreateSequence(new AsnType[] { p, q, g });
 
-      // OID - packed 1.2.840.10040.4.1
-      //   { 0x2A, 0x86, 0x48, 0xCE, 0x38, 0x04, 0x01 }
-      AsnType oid = CreateOid("1.2.840.10040.4.1");
+    //  // OID - packed 1.2.840.10040.4.1
+    //  //   { 0x2A, 0x86, 0x48, 0xCE, 0x38, 0x04, 0x01 }
+    //  AsnType oid = CreateOid("1.2.840.10040.4.1");
 
-      // AlgorithmIdentifier
-      AsnType algorithmID = CreateSequence(new AsnType[] { oid, dssParams });
+    //  // AlgorithmIdentifier
+    //  AsnType algorithmID = CreateSequence(new AsnType[] { oid, dssParams });
 
-      // Private Key X
-      AsnType x = CreateIntegerPos(privateKey.X);
-      AsnType key = CreateOctetString(x);
+    //  // Private Key X
+    //  AsnType x = CreateIntegerPos(privateKey.X);
+    //  AsnType key = CreateOctetString(x);
 
-      // Sequence
-      AsnType privateKeyInfo =
-        CreateSequence(new AsnType[] { version, algorithmID, key });
+    //  // Sequence
+    //  AsnType privateKeyInfo =
+    //    CreateSequence(new AsnType[] { version, algorithmID, key });
 
-      return new AsnMessage(privateKeyInfo.GetBytes(), "PKCS#8");
-    }
+    //  return new AsnMessage(privateKeyInfo.GetBytes(), "PKCS#8");
+    //}
 
     // PKCS #8, Section 6 (PrivateKeyInfo) message
     // !!!!!!!!!!!!!!! Unencrypted !!!!!!!!!!!!!!!

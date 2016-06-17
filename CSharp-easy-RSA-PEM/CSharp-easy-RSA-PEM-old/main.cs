@@ -21,7 +21,7 @@ namespace CSharp_easy_RSA_PEM
         /// <param name="privateKeyBytes">Byte array containing PEM string of private key.</param>
         /// <returns>An instance of <see cref="RSACryptoServiceProvider"/> rapresenting the requested private key.
         /// Null if method fails on retriving the key.</returns>
-        public static RSACryptoServiceProvider DecodeRsaPrivateKey(string privateKey, string password="")
+        public static RSACryptoServiceProvider DecodeRsaPrivateKey(string privateKey,string password="")
         {
             Dictionary<string, string> extras = new Dictionary<string, string>();
             byte[] bytes = Helpers.GetBytesFromPEM(privateKey, out extras);
@@ -33,10 +33,10 @@ namespace CSharp_easy_RSA_PEM
 
                 for (int i = 0; i < salt.Length; i++)
                     salt[i] = Convert.ToByte(saltstr.Substring(i * 2, 2), 16);
-                //SecureString despswd = new SecureString(); // GetSecPswd("Enter password to derive 3DES key==>");
-                //foreach (char c in password)
-                //    despswd.AppendChar(c);
-                byte[] decoded = DecryptRSAPrivatePEM(bytes, salt, password);
+                SecureString despswd = new SecureString(); // GetSecPswd("Enter password to derive 3DES key==>");
+                foreach (char c in password)
+                    despswd.AppendChar(c);
+                byte[] decoded = DecryptRSAPrivatePEM(bytes, salt, despswd);
                 bytes = decoded;
             }
 
@@ -45,88 +45,85 @@ namespace CSharp_easy_RSA_PEM
         public static RSACryptoServiceProvider DecodeRsaPrivateKey(byte[] privateKeyBytes)// PKCS1 
         {
             MemoryStream ms = new MemoryStream(privateKeyBytes);
-            using (BinaryReader rd = new BinaryReader(ms))
+            BinaryReader rd = new BinaryReader(ms);
+
+            try
             {
-                try
+                byte byteValue;
+                ushort shortValue;
+
+                shortValue = rd.ReadUInt16();
+
+                switch (shortValue)
                 {
-                    byte byteValue;
-                    ushort shortValue;
-
-                    shortValue = rd.ReadUInt16();
-
-                    switch (shortValue)
-                    {
-                        case 0x8130:
-                            // If true, data is little endian since the proper logical seq is 0x30 0x81
-                            rd.ReadByte(); //advance 1 byte
-                            break;
-                        case 0x8230:
-                            rd.ReadInt16(); //advance 2 bytes
-                            break;
-                        default:
-                            Debug.Assert(false); // Improper ASN.1 format
-                            return null;
-                    }
-
-                    shortValue = rd.ReadUInt16();
-                    if (shortValue != 0x0102) // (version number)
-                    {
-                        Debug.Assert(false); // Improper ASN.1 format, unexpected version number
+                    case 0x8130:
+                        // If true, data is little endian since the proper logical seq is 0x30 0x81
+                        rd.ReadByte(); //advance 1 byte
+                        break;
+                    case 0x8230:
+                        rd.ReadInt16();  //advance 2 bytes
+                        break;
+                    default:
+                        Debug.Assert(false);     // Improper ASN.1 format
                         return null;
-                    }
-
-                    byteValue = rd.ReadByte();
-                    if (byteValue != 0x00)
-                    {
-                        Debug.Assert(false); // Improper ASN.1 format
-                        return null;
-                    }
-
-                    // The data following the version will be the ASN.1 data itself, which in our case
-                    // are a sequence of integers.
-
-                    // In order to solve a problem with instancing RSACryptoServiceProvider
-                    // via default constructor on .net 4.0 this is a hack
-                    CspParameters parms = new CspParameters();
-                    parms.Flags = CspProviderFlags.NoFlags;
-                    parms.KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant();
-
-                    // TODO: ???
-                    // https://msdn.microsoft.com/en-us/library/system.security.cryptography.cspparameters.providertype(v=vs.110).aspx
-                    // What's with the OS conditions?
-                    //parms.ProviderType = ((Environment.OSVersion.Version.Major > 5) || ((Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor >= 1))) ? 0x18 : 1;
-                    parms.ProviderType = 0x18;
-
-                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(parms);
-                    RSAParameters rsAparams = new RSAParameters();
-
-                    rsAparams.Modulus = rd.ReadBytes(Helpers.DecodeIntegerSize(rd));
-
-                    // Argh, this is a pain.  From emperical testing it appears to be that RSAParameters doesn't like byte buffers that
-                    // have their leading zeros removed.  The RFC doesn't address this area that I can see, so it's hard to say that this
-                    // is a bug, but it sure would be helpful if it allowed that. So, there's some extra code here that knows what the
-                    // sizes of the various components are supposed to be.  Using these sizes we can ensure the buffer sizes are exactly
-                    // what the RSAParameters expect.  Thanks, Microsoft.
-                    RSAParameterTraits traits = new RSAParameterTraits(rsAparams.Modulus.Length*8);
-
-                    rsAparams.Modulus = Helpers.AlignBytes(rsAparams.Modulus, traits.size_Mod);
-                    rsAparams.Exponent = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Exp);
-                    rsAparams.D = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_D);
-                    rsAparams.P = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_P);
-                    rsAparams.Q = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Q);
-                    rsAparams.DP = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DP);
-                    rsAparams.DQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DQ);
-                    rsAparams.InverseQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)),
-                        traits.size_InvQ);
-
-                    rsa.ImportParameters(rsAparams);
-                    return rsa;
                 }
-                catch (Exception e)
+
+                shortValue = rd.ReadUInt16();
+                if (shortValue != 0x0102) // (version number)
                 {
-                    Debug.Assert(false);
+                    Debug.Assert(false);     // Improper ASN.1 format, unexpected version number
                     return null;
                 }
+
+                byteValue = rd.ReadByte();
+                if (byteValue != 0x00)
+                {
+                    Debug.Assert(false);     // Improper ASN.1 format
+                    return null;
+                }
+
+                // The data following the version will be the ASN.1 data itself, which in our case
+                // are a sequence of integers.
+
+                // In order to solve a problem with instancing RSACryptoServiceProvider
+                // via default constructor on .net 4.0 this is a hack
+                CspParameters parms = new CspParameters();
+                parms.Flags = CspProviderFlags.NoFlags;
+                parms.KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant();
+                parms.ProviderType = ((Environment.OSVersion.Version.Major > 5) || ((Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor >= 1))) ? 0x18 : 1;
+
+                RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(parms);
+                RSAParameters rsAparams = new RSAParameters();
+
+                rsAparams.Modulus = rd.ReadBytes(Helpers.DecodeIntegerSize(rd));
+
+                // Argh, this is a pain.  From emperical testing it appears to be that RSAParameters doesn't like byte buffers that
+                // have their leading zeros removed.  The RFC doesn't address this area that I can see, so it's hard to say that this
+                // is a bug, but it sure would be helpful if it allowed that. So, there's some extra code here that knows what the
+                // sizes of the various components are supposed to be.  Using these sizes we can ensure the buffer sizes are exactly
+                // what the RSAParameters expect.  Thanks, Microsoft.
+                RSAParameterTraits traits = new RSAParameterTraits(rsAparams.Modulus.Length * 8);
+
+                rsAparams.Modulus = Helpers.AlignBytes(rsAparams.Modulus, traits.size_Mod);
+                rsAparams.Exponent = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Exp);
+                rsAparams.D = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_D);
+                rsAparams.P = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_P);
+                rsAparams.Q = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Q);
+                rsAparams.DP = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DP);
+                rsAparams.DQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DQ);
+                rsAparams.InverseQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_InvQ);
+
+                rsa.ImportParameters(rsAparams);
+                return rsa;
+            }
+            catch (Exception e)
+            {
+                Debug.Assert(false);
+                return null;
+            }
+            finally
+            {
+                rd.Close();
             }
         }
         public static RSACryptoServiceProvider DecodeRsaPublicKey(string publicKey)
@@ -136,89 +133,84 @@ namespace CSharp_easy_RSA_PEM
         public static RSACryptoServiceProvider DecodeRsaPublicKey(byte[] publicKeyBytes)   // PKCS1
         {
             MemoryStream ms = new MemoryStream(publicKeyBytes);
-            using (BinaryReader rd = new BinaryReader(ms))
+            BinaryReader rd = new BinaryReader(ms);
+            try
             {
+                byte byteValue;
+                ushort shortValue;
 
-                try
+                shortValue = rd.ReadUInt16();
+
+                switch (shortValue)
                 {
-                    byte byteValue;
-                    ushort shortValue;
-
-                    shortValue = rd.ReadUInt16();
-
-                    switch (shortValue)
-                    {
-                        case 0x8130:
-                            // If true, data is little endian since the proper logical seq is 0x30 0x81
-                            rd.ReadByte(); //advance 1 byte
-                            break;
-                        case 0x8230:
-                            rd.ReadInt16(); //advance 2 bytes
-                            break;
-                        default:
-                            Debug.Assert(false); // Improper ASN.1 format
-                            return null;
-                    }
-
-                    shortValue = rd.ReadUInt16();
-                    if (shortValue != 0x0102) // (version number)
-                    {
-                        Debug.Assert(false); // Improper ASN.1 format, unexpected version number
+                    case 0x8130:
+                        // If true, data is little endian since the proper logical seq is 0x30 0x81
+                        rd.ReadByte(); //advance 1 byte
+                        break;
+                    case 0x8230:
+                        rd.ReadInt16();  //advance 2 bytes
+                        break;
+                    default:
+                        Debug.Assert(false);     // Improper ASN.1 format
                         return null;
-                    }
-
-                    byteValue = rd.ReadByte();
-                    if (byteValue != 0x00)
-                    {
-                        Debug.Assert(false); // Improper ASN.1 format
-                        return null;
-                    }
-
-                    // The data following the version will be the ASN.1 data itself, which in our case
-                    // are a sequence of integers.
-
-                    // In order to solve a problem with instancing RSACryptoServiceProvider
-                    // via default constructor on .net 4.0 this is a hack
-                    CspParameters parms = new CspParameters();
-                    parms.Flags = CspProviderFlags.NoFlags;
-                    parms.KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant();
-
-
-                    // TODO: ???
-                    // https://msdn.microsoft.com/en-us/library/system.security.cryptography.cspparameters.providertype(v=vs.110).aspx
-                    // What's with the OS conditions?
-                    //parms.ProviderType = ((Environment.OSVersion.Version.Major > 5) || ((Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor >= 1))) ? 0x18 : 1;
-                    parms.ProviderType = 0x18;
-
-                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(parms);
-                    RSAParameters rsAparams = new RSAParameters();
-
-                    rsAparams.Modulus = rd.ReadBytes(Helpers.DecodeIntegerSize(rd));
-
-                    // Argh, this is a pain.  From emperical testing it appears to be that RSAParameters doesn't like byte buffers that
-                    // have their leading zeros removed.  The RFC doesn't address this area that I can see, so it's hard to say that this
-                    // is a bug, but it sure would be helpful if it allowed that. So, there's some extra code here that knows what the
-                    // sizes of the various components are supposed to be.  Using these sizes we can ensure the buffer sizes are exactly
-                    // what the RSAParameters expect.  Thanks, Microsoft.
-                    RSAParameterTraits traits = new RSAParameterTraits(rsAparams.Modulus.Length*8);
-
-                    rsAparams.Modulus = Helpers.AlignBytes(rsAparams.Modulus, traits.size_Mod);
-                    rsAparams.Exponent = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Exp);
-                    //rsAparams.D = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_D);
-                    //rsAparams.P = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_P);
-                    //rsAparams.Q = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Q);
-                    //rsAparams.DP = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DP);
-                    //rsAparams.DQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DQ);
-                    //rsAparams.InverseQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_InvQ);
-
-                    rsa.ImportParameters(rsAparams);
-                    return rsa;
                 }
-                catch (Exception e)
+
+                shortValue = rd.ReadUInt16();
+                if (shortValue != 0x0102) // (version number)
                 {
-                    Debug.Assert(false);
+                    Debug.Assert(false);     // Improper ASN.1 format, unexpected version number
                     return null;
                 }
+
+                byteValue = rd.ReadByte();
+                if (byteValue != 0x00)
+                {
+                    Debug.Assert(false);     // Improper ASN.1 format
+                    return null;
+                }
+
+                // The data following the version will be the ASN.1 data itself, which in our case
+                // are a sequence of integers.
+
+                // In order to solve a problem with instancing RSACryptoServiceProvider
+                // via default constructor on .net 4.0 this is a hack
+                CspParameters parms = new CspParameters();
+                parms.Flags = CspProviderFlags.NoFlags;
+                parms.KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant();
+                parms.ProviderType = ((Environment.OSVersion.Version.Major > 5) || ((Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor >= 1))) ? 0x18 : 1;
+
+                RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(parms);
+                RSAParameters rsAparams = new RSAParameters();
+
+                rsAparams.Modulus = rd.ReadBytes(Helpers.DecodeIntegerSize(rd));
+
+                // Argh, this is a pain.  From emperical testing it appears to be that RSAParameters doesn't like byte buffers that
+                // have their leading zeros removed.  The RFC doesn't address this area that I can see, so it's hard to say that this
+                // is a bug, but it sure would be helpful if it allowed that. So, there's some extra code here that knows what the
+                // sizes of the various components are supposed to be.  Using these sizes we can ensure the buffer sizes are exactly
+                // what the RSAParameters expect.  Thanks, Microsoft.
+                RSAParameterTraits traits = new RSAParameterTraits(rsAparams.Modulus.Length * 8);
+
+                rsAparams.Modulus = Helpers.AlignBytes(rsAparams.Modulus, traits.size_Mod);
+                rsAparams.Exponent = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Exp);
+                //rsAparams.D = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_D);
+                //rsAparams.P = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_P);
+                //rsAparams.Q = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Q);
+                //rsAparams.DP = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DP);
+                //rsAparams.DQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DQ);
+                //rsAparams.InverseQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_InvQ);
+
+                rsa.ImportParameters(rsAparams);
+                return rsa;
+            }
+            catch (Exception e)
+            {
+                Debug.Assert(false);
+                return null;
+            }
+            finally
+            {
+                rd.Close();
             }
         }
         public static RSACryptoServiceProvider DecodeX509PublicKey(string publicKey)
@@ -228,116 +220,111 @@ namespace CSharp_easy_RSA_PEM
         public static RSACryptoServiceProvider DecodePublicKey(byte[] publicKeyBytes)       // x509
         {
             MemoryStream ms = new MemoryStream(publicKeyBytes);
-            using (BinaryReader rd = new BinaryReader(ms))
-            { 
-                byte[] SeqOID = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
-                byte[] seq = new byte[15];
+            BinaryReader rd = new BinaryReader(ms);
+            byte[] SeqOID = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
+            byte[] seq = new byte[15];
 
-                try
+            try
+            {
+                byte byteValue;
+                ushort shortValue;
+
+                shortValue = rd.ReadUInt16();
+
+                switch (shortValue)
                 {
-                    byte byteValue;
-                    ushort shortValue;
-
-                    shortValue = rd.ReadUInt16();
-
-                    switch (shortValue)
-                    {
-                        case 0x8130:
-                            // If true, data is little endian since the proper logical seq is 0x30 0x81
-                            rd.ReadByte(); //advance 1 byte
-                            break;
-                        case 0x8230:
-                            rd.ReadInt16();  //advance 2 bytes
-                            break;
-                        default:
-                            Debug.Assert(false);     // Improper ASN.1 format
-                            return null;
-                    }
-
-                    seq = rd.ReadBytes(15);		//read the Sequence OID
-                    if (!Helpers.CompareBytearrays(seq, SeqOID))	//make sure Sequence for OID is correct
-                        return null;
-
-                    shortValue = rd.ReadUInt16();
-                    if (shortValue == 0x8103)	//data read as little endian order (actual data order for Bit String is 03 81)
-                        rd.ReadByte();	//advance 1 byte
-                    else if (shortValue == 0x8203)
-                        rd.ReadInt16();	//advance 2 bytes
-                    else
-                        return null;
-
-                    byteValue = rd.ReadByte();
-                    if (byteValue != 0x00)
-                    {
+                    case 0x8130:
+                        // If true, data is little endian since the proper logical seq is 0x30 0x81
+                        rd.ReadByte(); //advance 1 byte
+                        break;
+                    case 0x8230:
+                        rd.ReadInt16();  //advance 2 bytes
+                        break;
+                    default:
                         Debug.Assert(false);     // Improper ASN.1 format
                         return null;
-                    }
-
-                    shortValue = rd.ReadUInt16();
-                    if (shortValue == 0x8130)	//data read as little endian order (actual data order for Sequence is 30 81)
-                        rd.ReadByte();	//advance 1 byte
-                    else if (shortValue == 0x8230)
-                        rd.ReadInt16();	//advance 2 bytes
-                    else
-                        return null;
-
-                    // The data following the version will be the ASN.1 data itself, which in our case
-                    // are a sequence of integers.
-
-                    // In order to solve a problem with instancing RSACryptoServiceProvider
-                    // via default constructor on .net 4.0 this is a hack
-                    CspParameters parms = new CspParameters();
-                    parms.Flags = CspProviderFlags.NoFlags;
-                    parms.KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant();
-
-                    // TODO: ???
-                    // https://msdn.microsoft.com/en-us/library/system.security.cryptography.cspparameters.providertype(v=vs.110).aspx
-                    // What's with the OS conditions?
-                    //parms.ProviderType = ((Environment.OSVersion.Version.Major > 5) || ((Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor >= 1))) ? 0x18 : 1;
-                    parms.ProviderType = 0x18;
-
-                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(parms);
-                    RSAParameters rsAparams = new RSAParameters();
-
-                    rsAparams.Modulus = rd.ReadBytes(Helpers.DecodeIntegerSize(rd));
-
-                    // Argh, this is a pain.  From emperical testing it appears to be that RSAParameters doesn't like byte buffers that
-                    // have their leading zeros removed.  The RFC doesn't address this area that I can see, so it's hard to say that this
-                    // is a bug, but it sure would be helpful if it allowed that. So, there's some extra code here that knows what the
-                    // sizes of the various components are supposed to be.  Using these sizes we can ensure the buffer sizes are exactly
-                    // what the RSAParameters expect.  Thanks, Microsoft.
-                    RSAParameterTraits traits = new RSAParameterTraits(rsAparams.Modulus.Length * 8);
-
-                    rsAparams.Modulus = Helpers.AlignBytes(rsAparams.Modulus, traits.size_Mod);
-                    rsAparams.Exponent = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Exp);
-                    //rsAparams.D = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_D);
-                    //rsAparams.P = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_P);
-                    //rsAparams.Q = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Q);
-                    //rsAparams.DP = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DP);
-                    //rsAparams.DQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DQ);
-                    //rsAparams.InverseQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_InvQ);
-
-                    rsa.ImportParameters(rsAparams);
-                    return rsa;
                 }
-                catch (Exception e)
+
+                seq = rd.ReadBytes(15);		//read the Sequence OID
+                if (!Helpers.CompareBytearrays(seq, SeqOID))	//make sure Sequence for OID is correct
+                    return null;
+
+                shortValue = rd.ReadUInt16();
+                if (shortValue == 0x8103)	//data read as little endian order (actual data order for Bit String is 03 81)
+                    rd.ReadByte();	//advance 1 byte
+                else if (shortValue == 0x8203)
+                    rd.ReadInt16();	//advance 2 bytes
+                else
+                    return null;
+
+                byteValue = rd.ReadByte();
+                if (byteValue != 0x00)
                 {
-                    Debug.Assert(false);
+                    Debug.Assert(false);     // Improper ASN.1 format
                     return null;
                 }
+
+                shortValue = rd.ReadUInt16();
+                if (shortValue == 0x8130)	//data read as little endian order (actual data order for Sequence is 30 81)
+                    rd.ReadByte();	//advance 1 byte
+                else if (shortValue == 0x8230)
+                    rd.ReadInt16();	//advance 2 bytes
+                else
+                    return null;
+
+                // The data following the version will be the ASN.1 data itself, which in our case
+                // are a sequence of integers.
+
+                // In order to solve a problem with instancing RSACryptoServiceProvider
+                // via default constructor on .net 4.0 this is a hack
+                CspParameters parms = new CspParameters();
+                parms.Flags = CspProviderFlags.NoFlags;
+                parms.KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant();
+                parms.ProviderType = ((Environment.OSVersion.Version.Major > 5) || ((Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor >= 1))) ? 0x18 : 1;
+
+                RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(parms);
+                RSAParameters rsAparams = new RSAParameters();
+
+                rsAparams.Modulus = rd.ReadBytes(Helpers.DecodeIntegerSize(rd));
+
+                // Argh, this is a pain.  From emperical testing it appears to be that RSAParameters doesn't like byte buffers that
+                // have their leading zeros removed.  The RFC doesn't address this area that I can see, so it's hard to say that this
+                // is a bug, but it sure would be helpful if it allowed that. So, there's some extra code here that knows what the
+                // sizes of the various components are supposed to be.  Using these sizes we can ensure the buffer sizes are exactly
+                // what the RSAParameters expect.  Thanks, Microsoft.
+                RSAParameterTraits traits = new RSAParameterTraits(rsAparams.Modulus.Length * 8);
+
+                rsAparams.Modulus = Helpers.AlignBytes(rsAparams.Modulus, traits.size_Mod);
+                rsAparams.Exponent = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Exp);
+                //rsAparams.D = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_D);
+                //rsAparams.P = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_P);
+                //rsAparams.Q = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_Q);
+                //rsAparams.DP = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DP);
+                //rsAparams.DQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_DQ);
+                //rsAparams.InverseQ = Helpers.AlignBytes(rd.ReadBytes(Helpers.DecodeIntegerSize(rd)), traits.size_InvQ);
+
+                rsa.ImportParameters(rsAparams);
+                return rsa;
+            }
+            catch (Exception e)
+            {
+                Debug.Assert(false);
+                return null;
+            }
+            finally
+            {
+                rd.Close();
             }
         }
 
-        public static string ExportPrivateKeyToRSAPEM(RSA csp) // PKCS1
+        public static string ExportPrivateKeyToRSAPEM(RSACryptoServiceProvider csp) // PKCS1
         {
             TextWriter outputStream = new StringWriter();
 
-            //if (csp.PublicOnly) throw new ArgumentException("CSP does not contain a private key", "csp");
+            if (csp.PublicOnly) throw new ArgumentException("CSP does not contain a private key", "csp");
             var parameters = csp.ExportParameters(true);
             using (var stream = new MemoryStream())
             {
-                ArraySegment<byte> buffer;
-
                 var writer = new BinaryWriter(stream);
                 writer.Write((byte)0x30); // SEQUENCE
                 using (var innerStream = new MemoryStream())
@@ -354,21 +341,10 @@ namespace CSharp_easy_RSA_PEM
                     Helpers.EncodeIntegerBigEndian(innerWriter, parameters.InverseQ);
                     var length = (int)innerStream.Length;
                     Helpers.EncodeLength(writer, length);
-
-                    if (!innerStream.TryGetBuffer(out buffer))
-                    {
-                        throw new Exception("Could not read memory stream");
-                    }
-
-                    writer.Write(buffer.Array, 0, length);
+                    writer.Write(innerStream.GetBuffer(), 0, length);
                 }
 
-                if (!stream.TryGetBuffer(out buffer))
-                {
-                    throw new Exception("Could not read memory stream");
-                }
-
-                return packagePEM(buffer.Array, PEMtypes.PEM_RSA);
+                return packagePEM(stream.GetBuffer(), PEMtypes.PEM_RSA);
                 //var base64 = Convert.ToBase64String(stream.GetBuffer(), 0, (int)stream.Length).ToCharArray();
                 //outputStream.WriteLine(Helpers.PEMheader(PEMtypes.PEM_RSA));//  "-----BEGIN RSA PRIVATE KEY-----");
                 //// Output as Base64 with lines chopped at 64 characters
@@ -380,15 +356,13 @@ namespace CSharp_easy_RSA_PEM
             }
             //return outputStream.ToString().Replace("\r","").Replace("\n\n", "\n");
         }
-        public static String ExportPublicKeyToRSAPEM(RSA csp)   // PKCS1
+        public static String ExportPublicKeyToRSAPEM(RSACryptoServiceProvider csp)   // PKCS1
         {
             TextWriter outputStream = new StringWriter();
 
             var parameters = csp.ExportParameters(false);
             using (var stream = new MemoryStream())
             {
-                ArraySegment<byte> buffer;
-
                 var writer = new BinaryWriter(stream);
                 writer.Write((byte)0x30); // SEQUENCE
                 using (var innerStream = new MemoryStream())
@@ -408,21 +382,10 @@ namespace CSharp_easy_RSA_PEM
 
                     var length = (int)innerStream.Length;
                     Helpers.EncodeLength(writer, length);
-
-                    if (!innerStream.TryGetBuffer(out buffer))
-                    {
-                        throw new Exception("Could not read memory stream");
-                    }
-
-                    writer.Write(buffer.Array, 0, length);
+                    writer.Write(innerStream.GetBuffer(), 0, length);
                 }
 
-                if (!stream.TryGetBuffer(out buffer))
-                {
-                    throw new Exception("Could not read memory stream");
-                }
-                
-                return packagePEM(buffer.Array, PEMtypes.PEM_RSA_PUBLIC);
+                return packagePEM(stream.GetBuffer(), PEMtypes.PEM_RSA_PUBLIC);
 
                 //var base64 = Convert.ToBase64String(stream.GetBuffer(), 0, (int)stream.Length).ToCharArray();
                 //outputStream.WriteLine(Helpers.PEMheader(PEMtypes.PEM_RSA_PUBLIC));
@@ -477,7 +440,7 @@ namespace CSharp_easy_RSA_PEM
 
         }
 
-        public static byte[] DecryptRSAPrivatePEM(byte[] privateKey, byte[] salt, string despswd)
+        public static byte[] DecryptRSAPrivatePEM(byte[] privateKey, byte[] salt, SecureString despswd)
         {
 
             //------ Get the 3DES 24 byte key using PDK used by OpenSSL ----
@@ -512,10 +475,9 @@ namespace CSharp_easy_RSA_PEM
             alg.IV = IV;
             try
             {
-                using (CryptoStream cs = new CryptoStream(memst, alg.CreateDecryptor(), CryptoStreamMode.Write))
-                {
-                    cs.Write(cipherData, 0, cipherData.Length);
-                }
+                CryptoStream cs = new CryptoStream(memst, alg.CreateDecryptor(), CryptoStreamMode.Write);
+                cs.Write(cipherData, 0, cipherData.Length);
+                cs.Close();
             }
             catch (Exception exc)
             {
@@ -526,14 +488,20 @@ namespace CSharp_easy_RSA_PEM
             return decryptedData;
         }
         //-----   OpenSSL PBKD uses only one hash cycle (count); miter is number of iterations required to build sufficient bytes ---
-        private static byte[] GetOpenSSL3deskey(byte[] salt, string pwd, int count, int miter)
+        private static byte[] GetOpenSSL3deskey(byte[] salt, SecureString secpswd, int count, int miter)
         {
             IntPtr unmanagedPswd = IntPtr.Zero;
             int HASHLENGTH = 16;	//MD5 bytes
             byte[] keymaterial = new byte[HASHLENGTH * miter];     //to store contatenated Mi hashed results
 
-            UTF8Encoding utf8 = new UTF8Encoding();
-            byte[] psbytes = utf8.GetBytes(pwd);
+
+            byte[] psbytes = new byte[secpswd.Length];
+            unmanagedPswd = Marshal.SecureStringToGlobalAllocAnsi(secpswd);
+            Marshal.Copy(unmanagedPswd, psbytes, 0, psbytes.Length);
+            Marshal.ZeroFreeGlobalAllocAnsi(unmanagedPswd);
+
+            //UTF8Encoding utf8 = new UTF8Encoding();
+            //byte[] psbytes = utf8.GetBytes(pswd);
 
             // --- contatenate salt and pswd bytes into fixed data array ---
             byte[] data00 = new byte[psbytes.Length + salt.Length];
@@ -541,7 +509,7 @@ namespace CSharp_easy_RSA_PEM
             Array.Copy(salt, 0, data00, psbytes.Length, salt.Length);	//concatenate the salt bytes
 
             // ---- do multi-hashing and contatenate results  D1, D2 ...  into keymaterial bytes ----
-            MD5 md5 = MD5.Create();
+            MD5 md5 = new MD5CryptoServiceProvider();
             byte[] result = null;
             byte[] hashtarget = new byte[HASHLENGTH + data00.Length];   //fixed length initial hashtarget
 
@@ -621,7 +589,7 @@ namespace CSharp_easy_RSA_PEM
             //rsaCryptoServiceProvider.FromXmlString(xmlString); 
             int base64BlockSize = ((key.KeySize / 8) % 3 != 0) ? (((key.KeySize / 8) / 3) * 4) + 4 : ((key.KeySize / 8) / 3) * 4;
             int iterations = inputString.Length / base64BlockSize;
-            var arrayList = new List<byte>();
+            ArrayList arrayList = new ArrayList();
             for (int i = 0; i < iterations; i++)
             {
                 byte[] encryptedBytes = Convert.FromBase64String(inputString.Substring(base64BlockSize * i, base64BlockSize));
@@ -631,7 +599,7 @@ namespace CSharp_easy_RSA_PEM
                 Array.Reverse(encryptedBytes);
                 arrayList.AddRange(key.Decrypt(encryptedBytes, true));
             }
-            return arrayList.ToArray();
+            return arrayList.ToArray(Type.GetType("System.Byte")) as byte[];
         }
 
         public static RSACryptoServiceProvider CreateRsaKeys(int keyLength = 2048)

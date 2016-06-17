@@ -1,12 +1,10 @@
 using System;
 using System.Text;
-using System.Security.Permissions;
-using System.Runtime.Serialization;
 
 namespace CSInteropKeys
 {
-  [Serializable]
-  public sealed class BerDecodeException : Exception, ISerializable
+  //[Serializable]
+  public sealed class BerDecodeException : Exception/*, ISerializable*/
   {
     private int m_position;
     public int Position
@@ -40,16 +38,16 @@ namespace CSInteropKeys
     public BerDecodeException(String message, int position, Exception ex)
       : base(message, ex) { m_position = position; }
 
-    private BerDecodeException(SerializationInfo info, StreamingContext context)
-      : base(info, context)
-    { m_position = info.GetInt32("Position"); }
+    //private BerDecodeException(SerializationInfo info, StreamingContext context)
+    //  : base(info, context)
+    //{ m_position = info.GetInt32("Position"); }
 
-    [SecurityPermission(SecurityAction.Demand, SerializationFormatter = true)]
-    public override void GetObjectData(SerializationInfo info, StreamingContext context)
-    {
-      base.GetObjectData(info, context);
-      info.AddValue("Position", m_position);
-    }
+    //[SecurityPermission(SecurityAction.Demand, SerializationFormatter = true)]
+    //public override void GetObjectData(SerializationInfo info, StreamingContext context)
+    //{
+    //  base.GetObjectData(info, context);
+    //  info.AddValue("Position", m_position);
+    //}
   }
 }
 

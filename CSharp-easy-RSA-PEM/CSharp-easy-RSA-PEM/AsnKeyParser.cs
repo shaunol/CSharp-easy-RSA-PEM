@@ -272,160 +272,160 @@ namespace CSInteropKeys
       return parameters;
     }
 
-    internal DSAParameters ParseDSAPublicKey()
-    {
-      DSAParameters parameters = new DSAParameters();
+  //  internal DSAParameters ParseDSAPublicKey()
+  //  {
+  //    DSAParameters parameters = new DSAParameters();
 
-      // Current value
-      byte[] value = null;
+  //    // Current value
+  //    byte[] value = null;
 
-      // Current Position
-      int position = parser.CurrentPosition();
-      // Sanity Checks
-      int length = 0;
+  //    // Current Position
+  //    int position = parser.CurrentPosition();
+  //    // Sanity Checks
+  //    int length = 0;
 
-      // Ignore Sequence - PublicKeyInfo
-      length = parser.NextSequence();
-      if (length != parser.RemainingBytes())
-      {
-        StringBuilder sb = new StringBuilder("Incorrect Sequence Size. ");
-        sb.AppendFormat("Specified: {0}, Remaining: {1}",
-          length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
-        throw new BerDecodeException(sb.ToString(), position);
-      }
+  //    // Ignore Sequence - PublicKeyInfo
+  //    length = parser.NextSequence();
+  //    if (length != parser.RemainingBytes())
+  //    {
+  //      StringBuilder sb = new StringBuilder("Incorrect Sequence Size. ");
+  //      sb.AppendFormat("Specified: {0}, Remaining: {1}",
+  //        length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
+  //      throw new BerDecodeException(sb.ToString(), position);
+  //    }
 
-      // Checkpoint
-      position = parser.CurrentPosition();
+  //    // Checkpoint
+  //    position = parser.CurrentPosition();
 
-      // Ignore Sequence - AlgorithmIdentifier
-      length = parser.NextSequence();
-      if (length > parser.RemainingBytes())
-      {
-        StringBuilder sb = new StringBuilder("Incorrect AlgorithmIdentifier Size. ");
-        sb.AppendFormat("Specified: {0}, Remaining: {1}",
-          length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
-        throw new BerDecodeException(sb.ToString(), position);
-      }
+  //    // Ignore Sequence - AlgorithmIdentifier
+  //    length = parser.NextSequence();
+  //    if (length > parser.RemainingBytes())
+  //    {
+  //      StringBuilder sb = new StringBuilder("Incorrect AlgorithmIdentifier Size. ");
+  //      sb.AppendFormat("Specified: {0}, Remaining: {1}",
+  //        length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
+  //      throw new BerDecodeException(sb.ToString(), position);
+  //    }
 
-      // Checkpoint
-      position = parser.CurrentPosition();
+  //    // Checkpoint
+  //    position = parser.CurrentPosition();
 
-      // Grab the OID
-      value = parser.NextOID();
-      byte[] oid = { 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01 };
-      if (!EqualOid(value, oid))
-      { throw new BerDecodeException("Expected OID 1.2.840.10040.4.1", position); }
+  //    // Grab the OID
+  //    value = parser.NextOID();
+  //    byte[] oid = { 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01 };
+  //    if (!EqualOid(value, oid))
+  //    { throw new BerDecodeException("Expected OID 1.2.840.10040.4.1", position); }
 
 
-      // Checkpoint
-      position = parser.CurrentPosition();
+  //    // Checkpoint
+  //    position = parser.CurrentPosition();
 
-      // Ignore Sequence - DSS-Params
-      length = parser.NextSequence();
-      if (length > parser.RemainingBytes())
-      {
-        StringBuilder sb = new StringBuilder("Incorrect DSS-Params Size. ");
-        sb.AppendFormat("Specified: {0}, Remaining: {1}",
-          length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
-        throw new BerDecodeException(sb.ToString(), position);
-      }
+  //    // Ignore Sequence - DSS-Params
+  //    length = parser.NextSequence();
+  //    if (length > parser.RemainingBytes())
+  //    {
+  //      StringBuilder sb = new StringBuilder("Incorrect DSS-Params Size. ");
+  //      sb.AppendFormat("Specified: {0}, Remaining: {1}",
+  //        length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
+  //      throw new BerDecodeException(sb.ToString(), position);
+  //    }
 
-      // Next three are curve parameters
-      parameters.P = TrimLeadingZero(parser.NextInteger());
-      parameters.Q = TrimLeadingZero(parser.NextInteger());
-      parameters.G = TrimLeadingZero(parser.NextInteger());
+  //    // Next three are curve parameters
+  //    parameters.P = TrimLeadingZero(parser.NextInteger());
+  //    parameters.Q = TrimLeadingZero(parser.NextInteger());
+  //    parameters.G = TrimLeadingZero(parser.NextInteger());
 
-      // Ignore BitString - PrivateKey
-      parser.NextBitString();
+  //    // Ignore BitString - PrivateKey
+  //    parser.NextBitString();
 
-      // Public Key
-      parameters.Y = TrimLeadingZero(parser.NextInteger());
+  //    // Public Key
+  //    parameters.Y = TrimLeadingZero(parser.NextInteger());
 
-      Debug.Assert(0 == parser.RemainingBytes());
+  //    Debug.Assert(0 == parser.RemainingBytes());
 
-      return parameters;
-    }
+  //    return parameters;
+  //  }
 
-    internal DSAParameters ParseDSAPrivateKey()
-    {
-      DSAParameters parameters = new DSAParameters();
+  //  internal DSAParameters ParseDSAPrivateKey()
+  //  {
+  //    DSAParameters parameters = new DSAParameters();
 
-      // Current value
-      byte[] value = null;
+  //    // Current value
+  //    byte[] value = null;
 
-      // Current Position
-      int position = parser.CurrentPosition();
-      // Sanity Checks
-      int length = 0;
+  //    // Current Position
+  //    int position = parser.CurrentPosition();
+  //    // Sanity Checks
+  //    int length = 0;
 
-      // Ignore Sequence - PrivateKeyInfo
-      length = parser.NextSequence();
-      if (length != parser.RemainingBytes())
-      {
-        StringBuilder sb = new StringBuilder("Incorrect Sequence Size. ");
-        sb.AppendFormat("Specified: {0}, Remaining: {1}",
-          length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
-        throw new BerDecodeException(sb.ToString(), position);
-      }
+  //    // Ignore Sequence - PrivateKeyInfo
+  //    length = parser.NextSequence();
+  //    if (length != parser.RemainingBytes())
+  //    {
+  //      StringBuilder sb = new StringBuilder("Incorrect Sequence Size. ");
+  //      sb.AppendFormat("Specified: {0}, Remaining: {1}",
+  //        length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
+  //      throw new BerDecodeException(sb.ToString(), position);
+  //    }
 
-      // Checkpoint
-      position = parser.CurrentPosition();
-      // Version
-      value = parser.NextInteger();
-      if (0x00 != value[0])
-      {
-        throw new BerDecodeException("Incorrect PrivateKeyInfo Version", position);
-      }
+  //    // Checkpoint
+  //    position = parser.CurrentPosition();
+  //    // Version
+  //    value = parser.NextInteger();
+  //    if (0x00 != value[0])
+  //    {
+  //      throw new BerDecodeException("Incorrect PrivateKeyInfo Version", position);
+  //    }
 
-      // Checkpoint
-      position = parser.CurrentPosition();
+  //    // Checkpoint
+  //    position = parser.CurrentPosition();
 
-      // Ignore Sequence - AlgorithmIdentifier
-      length = parser.NextSequence();
-      if (length > parser.RemainingBytes())
-      {
-        StringBuilder sb = new StringBuilder("Incorrect AlgorithmIdentifier Size. ");
-        sb.AppendFormat("Specified: {0}, Remaining: {1}",
-          length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
-        throw new BerDecodeException(sb.ToString(), position);
-      }
+  //    // Ignore Sequence - AlgorithmIdentifier
+  //    length = parser.NextSequence();
+  //    if (length > parser.RemainingBytes())
+  //    {
+  //      StringBuilder sb = new StringBuilder("Incorrect AlgorithmIdentifier Size. ");
+  //      sb.AppendFormat("Specified: {0}, Remaining: {1}",
+  //        length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
+  //      throw new BerDecodeException(sb.ToString(), position);
+  //    }
 
-      // Checkpoint
-      position = parser.CurrentPosition();
-      // Grab the OID
-      value = parser.NextOID();
-      byte[] oid = { 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01 };
-      if (!EqualOid(value, oid))
-      { throw new BerDecodeException("Expected OID 1.2.840.10040.4.1", position); }
+  //    // Checkpoint
+  //    position = parser.CurrentPosition();
+  //    // Grab the OID
+  //    value = parser.NextOID();
+  //    byte[] oid = { 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01 };
+  //    if (!EqualOid(value, oid))
+  //    { throw new BerDecodeException("Expected OID 1.2.840.10040.4.1", position); }
 
-      // Checkpoint
-      position = parser.CurrentPosition();
+  //    // Checkpoint
+  //    position = parser.CurrentPosition();
 
-      // Ignore Sequence - DSS-Params
-      length = parser.NextSequence();
-      if (length > parser.RemainingBytes())
-      {
-        StringBuilder sb = new StringBuilder("Incorrect DSS-Params Size. ");
-        sb.AppendFormat("Specified: {0}, Remaining: {1}",
-          length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
-        throw new BerDecodeException(sb.ToString(), position);
-      }
+  //    // Ignore Sequence - DSS-Params
+  //    length = parser.NextSequence();
+  //    if (length > parser.RemainingBytes())
+  //    {
+  //      StringBuilder sb = new StringBuilder("Incorrect DSS-Params Size. ");
+  //      sb.AppendFormat("Specified: {0}, Remaining: {1}",
+  //        length.ToString(CultureInfo.InvariantCulture), parser.RemainingBytes().ToString(CultureInfo.InvariantCulture));
+  //      throw new BerDecodeException(sb.ToString(), position);
+  //    }
 
-      // Next three are curve parameters
-      parameters.P = TrimLeadingZero(parser.NextInteger());
-      parameters.Q = TrimLeadingZero(parser.NextInteger());
-      parameters.G = TrimLeadingZero(parser.NextInteger());
+  //    // Next three are curve parameters
+  //    parameters.P = TrimLeadingZero(parser.NextInteger());
+  //    parameters.Q = TrimLeadingZero(parser.NextInteger());
+  //    parameters.G = TrimLeadingZero(parser.NextInteger());
 
-      // Ignore OctetString - PrivateKey
-      parser.NextOctetString();
+  //    // Ignore OctetString - PrivateKey
+  //    parser.NextOctetString();
 
-      // Private Key
-      parameters.X = TrimLeadingZero(parser.NextInteger());
+  //    // Private Key
+  //    parameters.X = TrimLeadingZero(parser.NextInteger());
 
-      Debug.Assert(0 == parser.RemainingBytes());
+  //    Debug.Assert(0 == parser.RemainingBytes());
 
-      return parameters;
-    }
+  //    return parameters;
+  //  }
   }
 
   class AsnParser
